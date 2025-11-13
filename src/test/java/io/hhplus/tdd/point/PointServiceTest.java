@@ -2,8 +2,8 @@ package io.hhplus.tdd.point;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
+import io.hhplus.tdd.point.exception.InsufficientPointException;
 import io.hhplus.tdd.point.exception.NegativePointException;
-import io.hhplus.tdd.point.exception.OverPointException;
 import io.hhplus.tdd.point.exception.ZeroPointException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -168,7 +168,7 @@ class PointServiceTest {
 
             @Nested
             @DisplayName("예외) 잔고 부족")
-            class InefficientPointTest
+            class InsufficientPointTest
             {
                 @Test
                 @DisplayName("잔고보다 많은 금액 사용하려고 하면 예외 발생")
@@ -184,7 +184,7 @@ class PointServiceTest {
 
                     //When, Then
                     // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
-                    assertThrows(OverPointException.class, () -> pointService.UsePoint(validUserId, useAmount));
+                    assertThrows(InsufficientPointException.class, () -> pointService.UsePoint(validUserId, useAmount));
                 }
             }
 

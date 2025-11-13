@@ -2,6 +2,9 @@ package io.hhplus.tdd.point;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
+import io.hhplus.tdd.point.exception.NegativePointException;
+import io.hhplus.tdd.point.exception.OverPointException;
+import io.hhplus.tdd.point.exception.ZeroPointException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @DisplayName("포인트 서비스")
@@ -38,8 +42,6 @@ class PointServiceTest {
     class UserPointTest
     {
         private static final long validUserId = 1L;
-        // private static final long invalidUserId = -1L;
-
         private static final long validInitialAmount = 1200L;
         private static final UserPoint validUserPoint = new UserPoint(validUserId, validInitialAmount, System.currentTimeMillis());
 
@@ -96,6 +98,45 @@ class PointServiceTest {
                 verify(userPointTable, times(1)).insertOrUpdate(validUserId, chargedAmount);
                 verify(pointHistoryTable, times(1)).insert(validUserId, chargeAmount, TransactionType.CHARGE, dbUpdateTime);
             }
+
+            @Nested
+            @DisplayName("예외) 잘못된 금액으로 충전")
+            class InvalidChargeAmountTest
+            {
+                @Test
+                @DisplayName("음수 금액 충전 시 예외 발생")
+                void givenNegativeAmount_whenCharge_thenThrowException()
+                {
+                    //Given : 음수 금액
+                    // 작성 이유: 음수 금액 충전은 불가능해야 함을 확인하기 위함
+                    long chargeAmount = -1000L;
+                    when(userPointTable.selectById(validUserId)).thenReturn(validUserPoint);
+                    // Mock 설정: insertOrUpdate가 호출될 때를 대비 (예외 처리가 없으면 이 부분까지 도달)
+                    when(userPointTable.insertOrUpdate(eq(validUserId), anyLong()))
+                            .thenReturn(new UserPoint(validUserId, 200L, System.currentTimeMillis()));
+
+                    //When, Then
+                    // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
+                    assertThrows(NegativePointException.class, () -> pointService.ChargePoint(validUserId, chargeAmount));
+                }
+
+                @Test
+                @DisplayName("0원 충전 시 예외 발생")
+                void givenZeroAmount_whenCharge_thenThorwException()
+                {
+                    //Given : 0원
+                    // 작성 이유: 0원 충전은 의미가 없으므로 예외 처리 필요
+                    long chargeAmount = 0L;
+                    when(userPointTable.selectById(validUserId)).thenReturn(validUserPoint);
+                    // Mock 설정: insertOrUpdate가 호출될 때를 대비
+                    when(userPointTable.insertOrUpdate(eq(validUserId), anyLong()))
+                            .thenReturn(new UserPoint(validUserId, validInitialAmount, System.currentTimeMillis()));
+
+                    //When, Then
+                    // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
+                    assertThrows(ZeroPointException.class, () -> pointService.ChargePoint(validUserId, chargeAmount));
+                }
+            }
         }
 
 
@@ -124,6 +165,69 @@ class PointServiceTest {
                 verify(pointHistoryTable, times(1)).insert(validUserId, usePoint, TransactionType.USE,
                         usedUserPoint.updateMillis());
             }
+
+            @Nested
+            @DisplayName("예외) 잔고 부족")
+            class InefficientPointTest
+            {
+                @Test
+                @DisplayName("잔고보다 많은 금액 사용하려고 하면 예외 발생")
+                void givenInsufficientPoint_whenUsePoint_thenThrowException()
+                {
+                    //Given : 잔고보다 많은 사용 금액 설정
+                    // 작성 이유: 요구사항에 따라 잔고가 부족할 경우 포인트 사용은 실패해야 함
+                    long useAmount = validInitialAmount + 1000L;
+                    when(userPointTable.selectById(validUserId)).thenReturn(validUserPoint);
+                    // Mock 설정: insertOrUpdate가 호출될 때를 대비 (예외 처리가 없으면 이 부분까지 도달)
+                    when(userPointTable.insertOrUpdate(eq(validUserId), anyLong()))
+                            .thenReturn(new UserPoint(validUserId, -1000L, System.currentTimeMillis()));
+
+                    //When, Then
+                    // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
+                    assertThrows(OverPointException.class, () -> pointService.UsePoint(validUserId, useAmount));
+                }
+            }
+
+            @Nested
+            @DisplayName("예외) 잘못된 금액 사용")
+            class InvalidUseAmountTest
+            {
+                @Test
+                @DisplayName("음수 금액 사용 시, 예외 발생")
+                void givenNegativeAmount_whenUsePoint_thenThrowsException()
+                {
+                    //Given
+                    // 작성 이유: 음수 금액 사용은 불가능해야 함
+                    long useAmount = -1000L;
+                    when(userPointTable.selectById(validUserId)).thenReturn(validUserPoint);
+                    // Mock 설정: insertOrUpdate가 호출될 때를 대비
+                    when(userPointTable.insertOrUpdate(eq(validUserId), anyLong()))
+                            .thenReturn(new UserPoint(validUserId, validInitialAmount + 1000L, System.currentTimeMillis()));
+
+                    //When,Then
+                    // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
+                    assertThrows(NegativePointException.class, ()->pointService.UsePoint(validUserId, useAmount));
+                }
+
+                @Test
+                @DisplayName("0원 사용 시, 예외 발생")
+                void givenZeroAmount_whenUsePoint_thenThrowsException()
+                {
+                    //Given
+                    // 작성 이유: 0원 사용은 의미가 없으므로 예외 처리 필요
+                    long useAmount = 0L;
+                    when(userPointTable.selectById(validUserId)).thenReturn(validUserPoint);
+                    // Mock 설정: insertOrUpdate가 호출될 때를 대비
+                    when(userPointTable.insertOrUpdate(eq(validUserId), anyLong()))
+                            .thenReturn(new UserPoint(validUserId, validInitialAmount, System.currentTimeMillis()));
+
+                    //When, Then
+                    // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
+                    assertThrows(ZeroPointException.class, () -> pointService.UsePoint(validUserId, useAmount));
+                }
+
+            }
+
         }
     }
 
@@ -134,7 +238,6 @@ class PointServiceTest {
     class PointHistoryTest
     {
         private static final long validUserId = 1L;
-        private static final long invalidUserId = -1L;
 
         @Nested
         @DisplayName("사용자 포인트 사용 내역 조회")

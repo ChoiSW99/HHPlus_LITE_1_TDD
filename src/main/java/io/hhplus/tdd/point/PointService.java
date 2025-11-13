@@ -21,7 +21,6 @@ public class PointService {
     // 사용자 포인트 조회
     public UserPoint getUserPointById(long id)
     {
-        // TODO : userId 예외처리
         return userPointTable.selectById(id);
     }
 
@@ -30,8 +29,6 @@ public class PointService {
     {
         UserPoint userPoint = userPointTable.selectById(id); // 기존 유저 포인트 조회
         long chargedAmount = userPoint.point() + chargeAmount; // 업데이트한 총합
-
-        // TODO : id 및 amount 예외처리
 
         UserPoint chargedUserPoint = userPointTable.insertOrUpdate(id, chargedAmount);
 
@@ -51,8 +48,6 @@ public class PointService {
 
         pointHistoryTable.insert(id, useAmount, TransactionType.USE,
                 usedUserPoint.updateMillis());
-
-        // TODO : amount 예외처리
 
         return usedUserPoint;
     }

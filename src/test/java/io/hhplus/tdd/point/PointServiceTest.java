@@ -59,7 +59,7 @@ class PointServiceTest {
 
                 // When
                 // (pointService.getUserPointById의 내부 구현에 대해, Given을 적용하여 테스트하는 과정)
-                UserPoint result = pointService.getUserPointById(validUserId);
+                UserPoint result = pointService.getUserPoint(validUserId);
 
                 // Then
                 assertThat(result).isEqualTo(validUserPoint);
@@ -89,7 +89,7 @@ class PointServiceTest {
 
                 /// When
                 // (pointService.ChargePoint 내부 구현에 대해, Given을 적용하여 테스트하는 과정)
-                UserPoint result = pointService.ChargePoint(validUserId, chargeAmount);
+                UserPoint result = pointService.charge(validUserId, chargeAmount);
 
                 /// Then
                 assertThat(result).isEqualTo(chargedUserPoint);
@@ -117,7 +117,7 @@ class PointServiceTest {
 
                     //When, Then
                     // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
-                    assertThrows(NegativePointException.class, () -> pointService.ChargePoint(validUserId, chargeAmount));
+                    assertThrows(NegativePointException.class, () -> pointService.charge(validUserId, chargeAmount));
                 }
 
                 @Test
@@ -134,7 +134,7 @@ class PointServiceTest {
 
                     //When, Then
                     // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
-                    assertThrows(ZeroPointException.class, () -> pointService.ChargePoint(validUserId, chargeAmount));
+                    assertThrows(ZeroPointException.class, () -> pointService.charge(validUserId, chargeAmount));
                 }
             }
         }
@@ -156,7 +156,7 @@ class PointServiceTest {
                 when(userPointTable.insertOrUpdate(validUserId, usedPoint)).thenReturn(usedUserPoint);
 
                 /// When
-                UserPoint result = pointService.UsePoint(validUserId, usePoint);
+                UserPoint result = pointService.use(validUserId, usePoint);
 
                 ///  Then
                 assertThat(result).isEqualTo(usedUserPoint);
@@ -184,7 +184,7 @@ class PointServiceTest {
 
                     //When, Then
                     // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
-                    assertThrows(InsufficientPointException.class, () -> pointService.UsePoint(validUserId, useAmount));
+                    assertThrows(InsufficientPointException.class, () -> pointService.use(validUserId, useAmount));
                 }
             }
 
@@ -206,7 +206,7 @@ class PointServiceTest {
 
                     //When,Then
                     // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
-                    assertThrows(NegativePointException.class, ()->pointService.UsePoint(validUserId, useAmount));
+                    assertThrows(NegativePointException.class, ()->pointService.use(validUserId, useAmount));
                 }
 
                 @Test
@@ -223,7 +223,7 @@ class PointServiceTest {
 
                     //When, Then
                     // Red 단계: 예외 처리가 없으므로 예외가 발생하지 않아 테스트가 실패해야 함
-                    assertThrows(ZeroPointException.class, () -> pointService.UsePoint(validUserId, useAmount));
+                    assertThrows(ZeroPointException.class, () -> pointService.use(validUserId, useAmount));
                 }
 
             }
@@ -255,7 +255,7 @@ class PointServiceTest {
                 when(pointHistoryTable.selectAllByUserId(validUserId)).thenReturn(histories);
 
                 ///  when
-                List<PointHistory> result = pointService.getPointHistoriesById(validUserId);
+                List<PointHistory> result = pointService.getPointHistories(validUserId);
 
                 ///  then
                 assertThat(result).hasSize(2);

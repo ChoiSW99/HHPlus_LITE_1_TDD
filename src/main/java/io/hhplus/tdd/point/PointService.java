@@ -2,10 +2,6 @@ package io.hhplus.tdd.point;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
-import io.hhplus.tdd.point.exception.InsufficientPointException;
-import io.hhplus.tdd.point.exception.NegativePointException;
-import io.hhplus.tdd.point.exception.ZeroPointException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,48 +18,46 @@ public class PointService {
     }
 
     // 사용자 포인트 조회
-    public UserPoint getUserPointById(long id)
+    public UserPoint getUserPoint(long id)
     {
         return userPointTable.selectById(id);
     }
 
     // 포인트 충전
-    public UserPoint ChargePoint(long id, long chargeAmount)
+    public UserPoint charge(long id, long chargeAmount)
     {
-        if (chargeAmount < 0) throw new NegativePointException("충전 금액은 음수일 수 없습니다.");
-        if (chargeAmount == 0) throw new ZeroPointException("충전 금액은 0일 수 없습니다.");
+        // 기존 유저 포인트
+        UserPoint userPoint = userPointTable.selectById(id);
 
-        UserPoint userPoint = userPointTable.selectById(id); // 기존 유저 포인트 조회
-        long chargedAmount = userPoint.point() + chargeAmount; // 업데이트한 총합
+        // 도메인에서 계산 (업데이트 값만)
+        UserPoint chargedUserPoint = userPoint.charge(chargeAmount);
 
-        UserPoint chargedUserPoint = userPointTable.insertOrUpdate(id, chargedAmount);
+        // DB에서 실제로 저장되는 UserPoint
+        UserPoint saved  = userPointTable.insertOrUpdate(id, chargedUserPoint.point());
 
+        // 히스토리는 DB 저장값의 updateMillis로 기록
         pointHistoryTable.insert(id, chargeAmount, TransactionType.CHARGE,
-                chargedUserPoint.updateMillis());
+                saved.updateMillis());
 
-        return chargedUserPoint;
+        return saved;
     }
 
     // 포인트 사용
-    public UserPoint UsePoint(long id, long useAmount)
+    public UserPoint use(long id, long useAmount)
     {
-        if (useAmount < 0) throw new NegativePointException("사용 금액은 0보다 커야합니다.");
-        if (useAmount == 0) throw new ZeroPointException("사용 금액은 0일 수 없습니다.");
-
         UserPoint userPoint = userPointTable.selectById(id);
-        long usedAmount = userPoint.point() - useAmount;
-        if (usedAmount < 0) throw new InsufficientPointException("사용 후 금액이 0보다 크거나 같아야 합니다.");
+        UserPoint updatedUserPoint = userPoint.use(useAmount);
 
-        UserPoint usedUserPoint = userPointTable.insertOrUpdate(id, usedAmount);
+        UserPoint savedUserPoint = userPointTable.insertOrUpdate(id, updatedUserPoint.point());
 
         pointHistoryTable.insert(id, useAmount, TransactionType.USE,
-                usedUserPoint.updateMillis());
+                savedUserPoint.updateMillis());
 
-        return usedUserPoint;
+        return savedUserPoint;
     }
 
     // 특정 사용자의 포인트 사용 내역 조회
-    public List<PointHistory> getPointHistoriesById(long id)
+    public List<PointHistory> getPointHistories(long id)
     {
         return pointHistoryTable.selectAllByUserId(id);
     }
